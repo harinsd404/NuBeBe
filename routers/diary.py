@@ -8,8 +8,14 @@ from models.models import MusicDiary, DiaryRecommendation, Song
 from schemas.diary import DiaryCreate, DiaryResponse, DiarySummaryResponse, SongResponse
 from services.nlp import nlp_service
 from services.recommendation import recommendation_service
+from services.genres import list_categories
 
 router = APIRouter(tags=["Diaries"])
+
+@router.get("/genres")
+def get_genres():
+    # 프론트엔드 장르 선택 UI 렌더링용 대분류 카테고리 목록 반환
+    return list_categories()
 
 @router.post("/diary", response_model=DiaryResponse, status_code=status.HTTP_201_CREATED)
 def create_diary(req: DiaryCreate, db: Session = Depends(get_db)):

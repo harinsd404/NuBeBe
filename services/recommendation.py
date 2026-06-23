@@ -1,8 +1,10 @@
 import logging
 import numpy as np
 from sklearn.neighbors import NearestNeighbors
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 from models.models import Song
+from services.genres import resolve_genres
 
 logger = logging.getLogger(__name__)
 
@@ -13,9 +15,17 @@ class RecommendationService:
         감정 좌표에 가장 가까운 상위 5개의 곡을 추천합니다.
         반환값: [(Song, rank, distance), ...]
         """
-        # 1. 1차 하드 필터링: 유저가 선택한 장르의 곡 선별 (소문자/대문자 구분 없이 필터링)
-        candidates = db.query(Song).filter(Song.genre.ilike(selected_genre)).all()
-        logger.info(f"🔍 [Hard Filtering] 장르 '{selected_genre}' 매칭 곡 수: {len(candidates)}개")
+        # 1. 1차 하드 필터링: 선택한 대분류 카테고리를 세부 장르 리스트로 확장하여 곡 선별
+        target_genres = resolve_genres(selected_genre)
+        candidates = (
+            db.query(Song)
+            .filter(func.lower(Song.genre).in_([g.lower() for g in target_genres]))
+            .all()
+        )
+        logger.info(
+            f"🔍 [Hard Filtering] 카테고리 '{selected_genre}' "
+            f"(세부 장르 {len(target_genres)}종) 매칭 곡 수: {len(candidates)}개"
+        )
 
         # 만약 해당 장르의 곡이 부족하다면(5곡 미만), 전체 곡 중에서 매칭되도록 폴백 적용
         if len(candidates) < 5:
